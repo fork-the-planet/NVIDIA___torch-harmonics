@@ -464,8 +464,33 @@ class DiscreteContinuousConv(nn.Module, metaclass=abc.ABCMeta):
 
 
 class DiscreteContinuousConvS2(DiscreteContinuousConv):
-    """
-    Discrete-continuous (DISCO) convolutions on the 2-Sphere as described in [1].
+    r"""
+    Discrete-continuous (DISCO) convolution on the 2-sphere, as described in :cite:`Ocampo2023`.
+
+    The layer evaluates a spherical convolution with a compactly supported
+    filter of angular radius ``theta_cutoff``.  The filter is parameterised as
+    a learnable linear combination of fixed basis functions
+    :math:`\{\phi_k\}`, and the integral is computed by sparse quadrature over
+    the input grid, giving :math:`O(N)` cost in the number of grid points.
+    The forward pass is
+
+    .. math::
+
+        g^{c_o}(\theta'_j, \lambda'_q)
+            = \sum_{c_i} \sum_k w_k^{c_o,c_i}
+              \sum_{i,\,p} \Psi_{k,\,j,\,(i,p)}\;
+              f^{c_i}(\theta_i, \lambda'_q + \lambda_p)
+
+    where :math:`\Psi` is a precomputed sparse convolution tensor that
+    encodes the basis function values at rotated input grid positions,
+    weighted by the quadrature weights.  Because the grid is equispaced in
+    longitude, :math:`\Psi` is independent of the output longitude
+    (p-shift symmetry).
+
+    .. seealso::
+        :doc:`/guide/disco_convolutions`
+            User guide with the full mathematical derivation, filter basis
+            visualisations, and worked examples.
 
     Parameters
     -----------
@@ -501,14 +526,9 @@ class DiscreteContinuousConvS2(DiscreteContinuousConv):
         Trades one extra contraction recompute in backward for K× memory savings.
         Only effective when optimized_kernel is True.
 
-    Returns
-    -------
-    out: torch.Tensor
-        Output tensor
-
     References
     ----------
-    [1] Ocampo, Price, McEwen, Scalable and equivariant spherical CNNs by discrete-continuous (DISCO) convolutions, ICLR (2023), arXiv:2209.13603
+    :cite:`Ocampo2023`
     """
 
     def __init__(
@@ -658,6 +678,19 @@ class DiscreteContinuousConvS2(DiscreteContinuousConv):
         return result
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Apply the discrete-continuous convolution.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input signal of shape ``(batch, in_channels, nlat_in, nlon_in)``.
+
+        Returns
+        -------
+        torch.Tensor
+            Convolved signal of shape ``(batch, out_channels, nlat_out, nlon_out)``.
+        """
 
         weight_r = self.weight.reshape(self.groups, self.out_per_group, self.weight.shape[1], self.weight.shape[2])
         kpacked_dtype = x.dtype
@@ -812,8 +845,22 @@ class DiscreteContinuousConvS2(DiscreteContinuousConv):
 
 
 class DiscreteContinuousConvTransposeS2(DiscreteContinuousConv):
-    """
-    Discrete-continuous (DISCO) transpose convolutions on the 2-Sphere as described in [1].
+    r"""
+    Discrete-continuous (DISCO) transpose convolution on the 2-sphere, as described in :cite:`Ocampo2023`.
+
+    This is the transpose (adjoint) of
+    :class:`~torch_harmonics.DiscreteContinuousConvS2`.  It uses the same
+    continuous-filter and quadrature construction but applies the
+    :math:`\Psi` tensor in the reverse direction -- typically to map a coarser
+    grid to a finer one (upsampling), analogous to a transposed/strided
+    convolution in the planar case.  It shares the compact-support filter and
+    sparse, linearly scaling evaluation, and the same approximate
+    :math:`SO(3)` equivariance.
+
+    .. seealso::
+        :doc:`/guide/disco_convolutions`
+            User guide with the full mathematical derivation, filter basis
+            visualisations, and worked examples.
 
     Parameters
     -----------
@@ -844,14 +891,9 @@ class DiscreteContinuousConvTransposeS2(DiscreteContinuousConv):
     optimized_kernel: Optional[bool]
         Whether to use the optimized kernel (if available)
 
-    Returns
-    --------
-    out: torch.Tensor
-        Output tensor
-
     References
     ----------
-    [1] Ocampo, Price, McEwen, Scalable and equivariant spherical CNNs by discrete-continuous (DISCO) convolutions, ICLR (2023), arXiv:2209.13603
+    :cite:`Ocampo2023`
     """
 
     def __init__(
@@ -930,6 +972,19 @@ class DiscreteContinuousConvTransposeS2(DiscreteContinuousConv):
         return torch.stack([self.psi_ker_idx, self.psi_row_idx, self.psi_col_idx], dim=0).contiguous()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Apply the transpose discrete-continuous convolution.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input signal of shape ``(batch, in_channels, nlat_in, nlon_in)``.
+
+        Returns
+        -------
+        torch.Tensor
+            Convolved signal of shape ``(batch, out_channels, nlat_out, nlon_out)``.
+        """
 
         # extract shape
         B, C, H, W = x.shape

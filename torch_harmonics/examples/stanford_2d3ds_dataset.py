@@ -54,7 +54,7 @@ DEFAULT_LABELS_URL = "https://raw.githubusercontent.com/alexsax/2D-3D-Semantics/
 
 class Stanford2D3DSDownloader:
     """
-    Convenience class for downloading the 2d3ds dataset [1].
+    Convenience class for downloading the 2d3ds dataset :cite:`Armeni2017`.
 
     Parameters
     ----------
@@ -72,9 +72,7 @@ class Stanford2D3DSDownloader:
 
     References
     ----------
-    .. [1] Armeni, I.,  Sax, S.,  Zamir, A. R.,  Savarese, S.;
-        "Joint 2D-3D-Semantic Data for Indoor Scene Understanding" (2017).
-        https://arxiv.org/abs/1702.01105.
+    :cite:`Armeni2017`
     """
 
     def __init__(self, base_url: str = DEFAULT_BASE_URL, local_dir: str = "data"):
@@ -434,6 +432,11 @@ class Stanford2D3DSDownloader:
             )
             return converted_dataset_path
 
+        try:
+            import requests  # noqa: F401
+        except ImportError:
+            raise ImportError("Downloading the Stanford 2D-3D-S dataset requires the '2d3ds' extras. " "Install them with: pip install torch-harmonics[2d3ds]")
+
         data_folders, class_labels = self.download_dataset(file_extracted_directory_pairs=file_extracted_directory_pairs)
         converted_dataset_path = self.convert_dataset(data_folders=data_folders, class_labels=class_labels, dataset_file=dataset_file, downsampling_factor=downsampling_factor)
 
@@ -444,7 +447,7 @@ class Stanford2D3DSDownloader:
 
 class StanfordSegmentationDataset(Dataset):
     """
-    Spherical segmentation dataset from [1].
+    Spherical segmentation dataset from :cite:`Armeni2017`.
 
     Parameters
     ----------
@@ -464,9 +467,7 @@ class StanfordSegmentationDataset(Dataset):
 
     References
     ----------
-    .. [1] Armeni, I.,  Sax, S.,  Zamir, A. R.,  Savarese, S.;
-        "Joint 2D-3D-Semantic Data for Indoor Scene Understanding" (2017).
-        https://arxiv.org/abs/1702.01105.
+    :cite:`Armeni2017`
     """
 
     def __init__(
@@ -597,7 +598,7 @@ class StanfordDatasetSubset(Subset):
 
 class StanfordDepthDataset(Dataset):
     """
-    Spherical segmentation dataset from [1].
+    Spherical segmentation dataset from :cite:`Armeni2017`.
 
     Parameters
     ----------
@@ -612,9 +613,7 @@ class StanfordDepthDataset(Dataset):
 
     References
     ----------
-    .. [1] Armeni, I.,  Sax, S.,  Zamir, A. R.,  Savarese, S.;
-        "Joint 2D-3D-Semantic Data for Indoor Scene Understanding" (2017).
-        https://arxiv.org/abs/1702.01105.
+    :cite:`Armeni2017`
     """
 
     def __init__(self, dataset_file, ignore_alpha_channel=True, log_depth=False, exclude_polar_fraction=0.0):
